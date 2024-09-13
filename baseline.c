@@ -20,6 +20,7 @@ int main(int argc, char *argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &start);
     
     // Calculate sum
+    // sum = N * (N - 1) / 2
     for (long long i = 0; i < N; i++) {
         sum += i;
     }
