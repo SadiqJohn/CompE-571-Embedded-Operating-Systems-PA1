@@ -6,7 +6,7 @@ NUM_THREADS_VALUES=(2 4 8)
 NUM_TASKS_VALUES=(2 4 8)
 MIN_REPEATS=5  # Minimum number of repetitions
 MAX_REPEATS=100  # Maximum number of repetitions to avoid infinite loops
-CONVERGENCE_THRESHOLD=0.01  # Threshold for standard deviation as a fraction of the average
+CONVERGENCE_THRESHOLD=0.1  # Threshold for standard deviation as a fraction of the average
 CSV_FILE="execution_times.csv"
 
 # Function to calculate average
