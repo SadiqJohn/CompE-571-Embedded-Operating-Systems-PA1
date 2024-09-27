@@ -4,7 +4,9 @@
 N_VALUES=(100000000 1000000000 10000000000)
 NUM_THREADS_VALUES=(2 4 8)
 NUM_TASKS_VALUES=(2 4 8)
-REPEAT=10  # Number of repetitions to ensure statistical significance
+MIN_REPEATS=5  # Minimum number of repetitions
+MAX_REPEATS=100  # Maximum number of repetitions to avoid infinite loops
+CONVERGENCE_THRESHOLD=0.01  # Threshold for standard deviation as a fraction of the average
 CSV_FILE="execution_times.csv"
 
 # Function to calculate average
@@ -13,7 +15,7 @@ calculate_average() {
     for time in "${times[@]}"; do
         sum=$(echo "$sum + $time" | bc)
     done
-    avg=$(echo "scale=5; $sum / $REPEAT" | bc)
+    avg=$(echo "scale=5; $sum / ${#times[@]}" | bc)
     echo $avg
 }
 
@@ -26,7 +28,7 @@ calculate_stddev() {
         sq=$(echo "$diff^2" | bc)
         sum_of_squares=$(echo "$sum_of_squares + $sq" | bc)
     done
-    variance=$(echo "scale=5; $sum_of_squares / $REPEAT" | bc)
+    variance=$(echo "scale=5; $sum_of_squares / ${#times[@]}" | bc)
     stddev=$(echo "scale=5; sqrt($variance)" | bc)
     echo $stddev
 }
@@ -34,7 +36,7 @@ calculate_stddev() {
 # Initialize CSV file and add headers
 echo "Case,N,Threads/Tasks,Execution Times (s),Average Time (s),Std Dev (s)" > $CSV_FILE
 
-# Run tests for each case
+# Run tests for each case until results are statistically significant
 run_test() {
     case=$1
     N=$2
@@ -43,30 +45,42 @@ run_test() {
 
     # Array to store execution times
     times=()
+    repeat_count=$MIN_REPEATS
 
-    # Run the program $REPEAT times
-    for ((i = 0; i < REPEAT; i++)); do
-        start_time=$(date +%s.%N)
-        if [[ "$case" == "multithreading" ]]; then
-            ./$program $N $THREADS_TASKS
-        elif [[ "$case" == "multitasking" ]]; then
-            ./$program $N $THREADS_TASKS
-        else
-            ./$program $N
+    # Run the program with a minimum number of repetitions
+    while [ $repeat_count -le $MAX_REPEATS ]; do
+        for ((i = ${#times[@]}; i < repeat_count; i++)); do
+            start_time=$(date +%s.%N)
+            if [[ "$case" == "multithreading" ]]; then
+                ./$program $N $THREADS_TASKS
+            elif [[ "$case" == "multitasking" ]]; then
+                ./$program $N $THREADS_TASKS
+            else
+                ./$program $N
+            fi
+            end_time=$(date +%s.%N)
+            elapsed=$(echo "$end_time - $start_time" | bc)
+            times+=($elapsed)
+        done
+
+        # Calculate average and standard deviation
+        avg=$(calculate_average)
+        stddev=$(calculate_stddev $avg)
+
+        # Check if the standard deviation is within the acceptable threshold
+        if (( $(echo "$stddev / $avg < $CONVERGENCE_THRESHOLD" | bc -l) )); then
+            break
         fi
-        end_time=$(date +%s.%N)
-        elapsed=$(echo "$end_time - $start_time" | bc)
-        times+=($elapsed)
-    done
 
-    # Calculate average and standard deviation
-    avg=$(calculate_average)
-    stddev=$(calculate_stddev $avg)
+        # Increase repeat count if not converged
+        repeat_count=$((repeat_count + 1))
+    done
 
     # Join times array as a single string for CSV
     exec_times=$(IFS=, ; echo "${times[*]}")
 
     # Output results to the console
+    echo "Case: $case, N: $N, Threads/Tasks: $THREADS_TASKS, Repeats: $repeat_count"
     echo "Average time: $avg seconds"
     echo "Standard deviation: $stddev seconds"
 
