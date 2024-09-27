@@ -3,8 +3,6 @@
 #include <pthread.h>
 #include <time.h>
 
-#define NUM_THREADS 4 // Number of threads
-
 // Structure to pass data to threads
 typedef struct {
     int start;
@@ -24,22 +22,36 @@ void *calculate_sum(void *arg) {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        printf("Please provide a value for N.\n");
+    // Check for correct number of arguments
+    if (argc < 3) {
+        fprintf(stderr, "Usage: %s N NUM_THREADS\n", argv[0]);
         return 1;
     }
-    
-    // Initialize N from user input
-    long long N = strtoll(argv[1], NULL, 10);  // Convert input to long long
+
+    // Parse command-line arguments
+    long long N = atoll(argv[1]);      // Total number up to which to sum
+    int NUM_THREADS = atoi(argv[2]);     // Number of tasks (child processes)
+
+    // Validate NUM_TASKS
+    if (NUM_THREADS <= 0) {
+        fprintf(stderr, "Error: NUM_THREADS must be positive.\n");
+        return 1;
+    }
+
+    // Ensure NUM_TASKS evenly divides N
+    if (N % NUM_THREADS != 0) {
+        fprintf(stderr, "Error: NUM_THREADS must evenly divide N.\n");
+        return 1;
+    }
 
     pthread_t threads[NUM_THREADS];
     ThreadData thread_data[NUM_THREADS];
     int workload = N / NUM_THREADS; // Divide the workload evenly
     int remainder = N % NUM_THREADS; // Handle the remainder if N is not divisible
 
-    struct timespec start, end;
     
     // Start timer
+    struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC, &start);
     
     // Create threads and assign their workload

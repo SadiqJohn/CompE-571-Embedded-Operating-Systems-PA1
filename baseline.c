@@ -10,13 +10,12 @@ int main(int argc, char *argv[]) {
 
     // Initialize sum and N
     long long sum = 0;
-    long long N = strtoll(argv[1], NULL, 10);  // Convert input to long long
-
-    struct timespec start, end;
+    long long N = atoll(argv[1]);      // Total number up to which to sum
     
     // Monothonic clock is used to measure elapsed time
     // real time is used to measure wall clock time
     // Start timer
+    struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC, &start);
     
     // Calculate sum
