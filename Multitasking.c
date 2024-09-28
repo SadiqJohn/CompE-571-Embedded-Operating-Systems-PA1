@@ -5,10 +5,10 @@
 #include <unistd.h>
 #include <time.h>
 
-// Function to calculate the sum in a given range
+// Function to calculate the sum in a given range (inclusive)
 unsigned long long calculate_sum(unsigned long long start, unsigned long long end) {
     unsigned long long sum = 0;
-    for (unsigned long long i = start; i < end; i++) {
+    for (unsigned long long i = start; i <= end; i++) {  // Inclusive of the end
         sum += i;
     }
     return sum;
@@ -28,11 +28,15 @@ void multitask_with_fork(unsigned long long N, int NUM_TASKS) {
         exit(EXIT_FAILURE);
     }
 
+    // Handle the range division
+    unsigned long long workload = N / NUM_TASKS;
     for (int i = 0; i < NUM_TASKS; i++) {
         pids[i] = fork();
         if (pids[i] == 0) {  // Child process
             close(fd[0]);  // Close the reading end of the pipe
-            unsigned long long partial_sum = calculate_sum(i * (N / NUM_TASKS), (i + 1) * (N / NUM_TASKS));
+            unsigned long long start = i * workload;
+            unsigned long long end = (i == NUM_TASKS - 1) ? N : (start + workload - 1);  // Inclusive for last process
+            unsigned long long partial_sum = calculate_sum(start, end);
             write(fd[1], &partial_sum, sizeof(partial_sum));  // Write the result to the pipe
             close(fd[1]);  // Close the writing end after use
             exit(0);  // Child exits after completing the task

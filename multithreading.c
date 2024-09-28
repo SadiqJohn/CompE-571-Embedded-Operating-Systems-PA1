@@ -6,10 +6,9 @@
 typedef struct {
     unsigned long long start;
     unsigned long long end;
-    long double sum;
+    unsigned long long sum;
 } ThreadData;
 
-// Function to calculate the sum in a given range
 void *calculate_sum(void *arg) {
     ThreadData *data = (ThreadData *)arg;
     data->sum = 0;
@@ -52,13 +51,13 @@ int main(int argc, char *argv[]) {
     unsigned long long current_start = 0;
     for (int i = 0; i < NUM_THREADS; i++) {
         thread_data[i].start = current_start;
-        thread_data[i].end = (i == NUM_THREADS - 1) ? N : current_start + workload - 1;
-        current_start = thread_data[i].end + 1;
-        pthread_create(&threads[i], NULL, calculate_sum, &thread_data[i]);
+        thread_data[i].end = (i == NUM_THREADS - 1) ? N : current_start + workload - 1;  // Ensure the last thread goes to N
+        current_start += workload; // Correct the starting point for the next thread
+        pthread_create(&threads[i], NULL, calculate_sum, (void *)&thread_data[i]);
     }
 
     // Wait for all threads to finish
-    long double total_sum = 0;
+    unsigned long long total_sum = 0;
     for (int i = 0; i < NUM_THREADS; i++) {
         pthread_join(threads[i], NULL);
         total_sum += thread_data[i].sum;
@@ -71,7 +70,7 @@ int main(int argc, char *argv[]) {
     double time_taken = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
 
     // Print the total sum and time taken
-    printf("Total sum is: %Lf\n", total_sum);
+    printf("Total sum is: %llu\n", total_sum); // Print the total sum
     printf("Time taken is %lf seconds\n", time_taken);
 
     return 0;
