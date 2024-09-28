@@ -6,20 +6,20 @@
 #include <time.h>
 
 // Function to calculate the sum in a given range
-long calculate_sum(long start, long end) {
-    long sum = 0;
-    for (long i = start; i < end; i++) {
+long double calculate_sum(unsigned long long start, unsigned long long end) {
+    long double sum = 0;
+    for (unsigned long long i = start; i <= end; i++) {
         sum += i;
     }
     return sum;
 }
 
 // Multitasking with fork()
-void multitask_with_fork(long N, int num_tasks) {
+void multitask_with_fork(unsigned long long N, int NUM_TASKS) {
     printf("Running multitasking with fork()...\n");
 
-    pid_t pids[num_tasks];
-    long sum = 0;
+    pid_t pids[NUM_TASKS];
+    long double total_sum = 0;
     int fd[2];  // File descriptor for pipe
 
     // Create a pipe for inter-process communication
@@ -28,70 +28,61 @@ void multitask_with_fork(long N, int num_tasks) {
         exit(EXIT_FAILURE);
     }
 
-    for (int i = 0; i < num_tasks; i++) {
+    for (int i = 0; i < NUM_TASKS; i++) {
         pids[i] = fork();
         if (pids[i] == 0) {  // Child process
             close(fd[0]);  // Close the reading end of the pipe
-            long partial_sum = calculate_sum(i * (N / num_tasks), (i + 1) * (N / num_tasks));
-            write(fd[1], &partial_sum, sizeof(partial_sum));  // Write the result to the pipe
-            close(fd[1]);  // Close the writing end after use
-            exit(0);  // Child exits after completing the task
+            unsigned long long start = i * (N / NUM_TASKS);
+            unsigned long long end = (i == NUM_TASKS - 1) ? N : (i + 1) * (N / NUM_TASKS) - 1;
+            long double partial_sum = calculate_sum(start, end);
+            write(fd[1], &partial_sum, sizeof(long double));
+            close(fd[1]);  // Close the writing end of the pipe
+            exit(0);
         }
     }
 
-    close(fd[1]);  // Close the writing end in the parent process
+    close(fd[1]);  // Close the writing end of the pipe in the parent
 
-    // Parent process accumulates the results from child processes
-    long partial_sum;
-    for (int i = 0; i < num_tasks; i++) {
-        wait(NULL);  // Wait for child processes to complete
-        read(fd[0], &partial_sum, sizeof(partial_sum));  // Read the result from the pipe
-        sum += partial_sum;  // Accumulate the sum
+    // Read partial sums from the child processes
+    long double partial_sum;
+    for (int i = 0; i < NUM_TASKS; i++) {
+        read(fd[0], &partial_sum, sizeof(long double));
+        total_sum += partial_sum;
     }
 
     close(fd[0]);  // Close the reading end of the pipe
 
-    printf("Final sum (fork): %ld\n", sum);
+    // Wait for all child processes to finish
+    for (int i = 0; i < NUM_TASKS; i++) {
+        wait(NULL);
+    }
+
+    // Print the total sum
+    printf("Total sum is: %Lf\n", total_sum);
 }
 
 int main(int argc, char *argv[]) {
-    // Check for correct number of arguments
     if (argc < 3) {
-        fprintf(stderr, "Usage: %s N NUM_THREADS\n", argv[0]);
+        fprintf(stderr, "Usage: %s N NUM_TASKS\n", argv[0]);
         return 1;
     }
 
-    // Parse command-line arguments
-    long long N = atoll(argv[1]);      // Total number up to which to sum
-    int NUM_THREADS = atoi(argv[2]);     // Number of tasks (child processes)
-
-    // Validate NUM_TASKS
-    if (NUM_THREADS <= 0) {
-        fprintf(stderr, "Error: NUM_THREADS must be positive.\n");
-        return 1;
-    }
-
-    // Ensure NUM_TASKS evenly divides N
-    if (N % NUM_THREADS != 0) {
-        fprintf(stderr, "Error: NUM_THREADS must evenly divide N.\n");
-        return 1;
-    }
-
-    // ** Fork() **
+    unsigned long long N = atoll(argv[1]);  // Total number up to which to sum
+    int NUM_TASKS = atoi(argv[2]);          // Number of tasks (processes)
 
     // Start timer
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC, &start);
 
-    // Multitasking with fork()
-    multitask_with_fork(N, num_tasks);
+    // Perform multitasking
+    multitask_with_fork(N, NUM_TASKS);
 
     // End timer
     clock_gettime(CLOCK_MONOTONIC, &end);
 
-    // Calculate time taken in seconds (with nanosecond precision)
+    // Calculate time taken in seconds
     double time_taken = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
-    printf("Time taken using fork(): %f seconds\n\n", time_taken);
+    printf("Time taken is %lf seconds\n", time_taken);
 
     return 0;
 }
