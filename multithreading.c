@@ -3,34 +3,30 @@
 #include <pthread.h>
 #include <time.h>
 
-// Structure to pass data to threads
 typedef struct {
     unsigned long long start;
     unsigned long long end;
-    unsigned long long sum;
+    long double sum;
 } ThreadData;
 
-// Thread function to calculate partial sum
+// Function to calculate the sum in a given range
 void *calculate_sum(void *arg) {
     ThreadData *data = (ThreadData *)arg;
-    unsigned long long sum = 0;
-    for (unsigned long long i = data->start; i < data->end; i++) {
-        sum += i;
+    data->sum = 0;
+    for (unsigned long long i = data->start; i <= data->end; i++) {
+        data->sum += i;
     }
-    data->sum = sum;  // Store the partial sum in the struct
-    pthread_exit(NULL);
+    return NULL;
 }
 
 int main(int argc, char *argv[]) {
-    // Check for correct number of arguments
     if (argc < 3) {
         fprintf(stderr, "Usage: %s N NUM_THREADS\n", argv[0]);
         return 1;
     }
 
-    // Parse command-line arguments
     unsigned long long N = atoll(argv[1]);  // Total number up to which to sum
-    int NUM_THREADS = atoi(argv[2]);       // Number of threads
+    int NUM_THREADS = atoi(argv[2]);        // Number of threads
 
     // Validate NUM_THREADS
     if (NUM_THREADS <= 0) {
@@ -56,32 +52,26 @@ int main(int argc, char *argv[]) {
     unsigned long long current_start = 0;
     for (int i = 0; i < NUM_THREADS; i++) {
         thread_data[i].start = current_start;
-        thread_data[i].end = current_start + workload;
-        current_start = thread_data[i].end;  // Update the start for the next thread
-        if (pthread_create(&threads[i], NULL, calculate_sum, (void *)&thread_data[i])) {
-            printf("Error creating thread %d\n", i);
-            return 1;
-        }
+        thread_data[i].end = (i == NUM_THREADS - 1) ? N : current_start + workload - 1;
+        current_start = thread_data[i].end + 1;
+        pthread_create(&threads[i], NULL, calculate_sum, &thread_data[i]);
     }
 
     // Wait for all threads to finish
-    unsigned long long total_sum = 0;
+    long double total_sum = 0;
     for (int i = 0; i < NUM_THREADS; i++) {
-        if (pthread_join(threads[i], NULL)) {
-            printf("Error joining thread %d\n", i);
-            return 1;
-        }
+        pthread_join(threads[i], NULL);
         total_sum += thread_data[i].sum;
     }
-    
+
     // End timer
     clock_gettime(CLOCK_MONOTONIC, &end);
 
     // Calculate time taken in seconds
     double time_taken = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
 
-    // Print sum and time taken
-    printf("Sum is: %llu\n", total_sum);
+    // Print the total sum and time taken
+    printf("Total sum is: %Lf\n", total_sum);
     printf("Time taken is %lf seconds\n", time_taken);
 
     return 0;
