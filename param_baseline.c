@@ -10,10 +10,10 @@ int main(int argc, char *argv[]) {
     	return 1;
 	}
 
-	// Initialize sum and N
+    
 	unsigned long long sum = 0;
-	unsigned long long upper = atoll(argv[1]);  // Total number up to which to sum
-	unsigned long long lower = atoll(argv[2]);
+	unsigned long long lower = atoll(argv[1]);        	//lower limit 
+	unsigned long long upper = atoll(argv[2]);        	//upper limit
     
     
 	// Calculate sum
@@ -23,8 +23,11 @@ int main(int argc, char *argv[]) {
     
     
 	// Print sum
-	printf("Sum is: %llu\n", sum);
+	printf("%llu\n", sum);
  
     
 	return 0;
 }
+
+
+
